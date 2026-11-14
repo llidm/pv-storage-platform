@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#2e7d32"            # 森林绿（按钮、滑块高亮）
+backgroundColor = "#f4f9f4"         # 极浅的薄荷绿背景
+secondaryBackgroundColor = "#ffffff" # 侧边栏和卡片用纯白
+textColor = "#1b5e20"               # 深绿文字
+font = "sans serif"
