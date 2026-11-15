@@ -153,9 +153,39 @@ with st.sidebar:
     st.markdown("### 🛠 参数配置中心")
     st.markdown("---")
 
+    # ========== 新增：CSV上传模块 ==========
+    st.markdown("**📂 时序数据上传（CSV）**")
+    st.caption("格式：hour, pv, load，共24行；不上传则使用模拟数据")
+    uploaded_file = st.file_uploader("上传光伏负荷时序表", type="csv")
+    use_real_data = False
+    pv_forecast = None
+    load_forecast = None
+    if uploaded_file is not None:
+        try:
+            df_upload = pd.read_csv(uploaded_file)
+            # 校验列
+            need_cols = {"hour", "pv", "load"}
+            if not need_cols.issubset(df_upload.columns):
+                st.error("❌ CSV缺少必要列！必须包含 hour、pv、load")
+            elif len(df_upload) != 24:
+                st.error("❌ 数据行数不对，必须是24个时刻（0~23点）")
+            else:
+                df_upload = df_upload.sort_values("hour").reset_index(drop=True)
+                pv_forecast = df_upload["pv"].values.astype(float)
+                load_forecast = df_upload["load"].values.astype(float)
+                # 校验负数
+                if np.any(pv_forecast < 0) or np.any(load_forecast < 0):
+                    st.error("❌ pv、load不能为负数！")
+                else:
+                    st.success("✅ 数据读取成功！使用上传真实时序数据")
+                    use_real_data = True
+        except Exception as e:
+            st.error(f"文件读取失败：{str(e)}")
+
     st.markdown("**🔆 光伏发电**")
-    pv_capacity = st.number_input("光伏装机容量 (kW)", min_value=10, max_value=5000, value=500, step=10)
-    pv_efficiency = st.slider("系统转换效率", 0.6, 1.0, 0.85, 0.01)
+    pv_capacity = st.number_input("光伏装机容量 (kW)", min_value=10, max_value=5000, value=500, step=10,
+                                  disabled=use_real_data)
+    pv_efficiency = st.slider("系统转换效率", 0.6, 1.0, 0.85, 0.01, disabled=use_real_data)
     st.markdown("**🔋 储能配置**")
     storage_kwh = st.number_input("储能系统容量 (kWh)", min_value=0, max_value=2000, value=200, step=10)
     p_ch_max = st.number_input("最大充电功率 (kW)", min_value=0, max_value=500, value=100, step=10)
@@ -173,14 +203,17 @@ with st.sidebar:
 # ================= 2. 数据准备与求解 =================
 T = 24
 hours = np.arange(T)
-np.random.seed(42)
-noise = np.random.normal(0, 0.05, T)
-irradiance = 1000 * np.exp(-((hours - 12.5) ** 2) / (2 * 3.0 ** 2)) * (1 + noise)
-irradiance = np.clip(irradiance, 0, 1000)
-pv_forecast = pv_capacity * (irradiance / 1000.0) * pv_efficiency
-load_base = 0.55 * pv_capacity
-load_noise = np.random.normal(0, 0.02, T)
-load_forecast = load_base * (1 + 0.3 * np.sin((hours - 8) * np.pi / 12)) * (1 + load_noise)
+# 如果没有上传文件，生成模拟数据
+if not use_real_data:
+    np.random.seed(42)
+    noise = np.random.normal(0, 0.05, T)
+    irradiance = 1000 * np.exp(-((hours - 12.5) ** 2) / (2 * 3.0 ** 2)) * (1 + noise)
+    irradiance = np.clip(irradiance, 0, 1000)
+    pv_forecast = pv_capacity * (irradiance / 1000.0) * pv_efficiency
+    load_base = 0.55 * pv_capacity
+    load_noise = np.random.normal(0, 0.02, T)
+    load_forecast = load_base * (1 + 0.3 * np.sin((hours - 8) * np.pi / 12)) * (1 + load_noise)
+
 price_buy = np.ones(T) * price_flat
 price_buy[0:8] = price_valley
 price_buy[18:23] = price_peak
@@ -363,6 +396,7 @@ elif nav_selection == "📄 智能评估报告导出":
         <table>
             <tr><th>光伏装机容量</th><td>{pv_capacity} kW</td><th>储能配置容量</th><td>{storage_kwh} kWh</td></tr>
             <tr><th>降碳权重设定</th><td>{carbon_weight}</td><th>电网排放因子</th><td>{emission_factor:.3f} tCO₂/MWh</td></tr>
+            <tr><th>数据源</th><td>{'上传自定义时序CSV' if use_real_data else '内置模拟时序数据'}</td><td></td><td></td></tr>
         </table>
         <h3>02. 节能减排核心指标 (年度)</h3>
         <table>
