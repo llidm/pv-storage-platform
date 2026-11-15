@@ -8,40 +8,29 @@ import numpy_financial as npf
 from core.optimizer import run_optimization
 from core.metrics import compute_metrics
 
-# ================= 页面基础配置 =================
-st.set_page_config(page_title="光储荷协同优化决策平台", layout="wide", page_icon="🌿")
+# ================= 页面基础配置【锁定侧边栏，禁止收起】 =================
+st.set_page_config(
+    page_title="光储荷协同优化决策平台",
+    layout="wide",
+    page_icon="🌿",
+    initial_sidebar_state="locked",  # 锁定侧边栏，隐藏折叠按钮
+    menu_items=None
+)
 
-# 注入高级环保绿自定义 CSS
+# 注入 CSS：只做页面美化，不碰侧边栏折叠控件
 st.markdown("""
 <style>
-    /* ======= 修复侧边栏展开按钮 ======= */
-    /* 隐藏顶部多余的东西，但不要用 visibility: hidden 整个 header */
+    /* 隐藏默认菜单和右上角工具栏 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stToolbar"] {display: none !important;}
-    
-    /* 把折叠按钮固定到左上角，并且放大、加颜色，绝对看得见 */
-    [data-testid="stSidebarCollapsedControl"] {
-        display: block !important;
-        visibility: visible !important;
-        position: fixed !important;
-        top: 10px !important;
-        left: 10px !important;
-        z-index: 999999 !important;
-        background-color: #2e7d32 !important; /* 绿色背景 */
-        border-radius: 5px !important;
-        padding: 5px !important;
-    }
-    
-    /* 改变里面箭头图标的颜色 */
-    [data-testid="stSidebarCollapsedControl"] svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-        width: 24px !important;
-        height: 24px !important;
+
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+        height: 3rem !important;
     }
 
-    /* 主标题 */
+    /* ======= 页面美化 ======= */
     .main-title {
         text-align: center;
         background: linear-gradient(90deg, #1b5e20, #4caf50, #2e7d32);
@@ -52,6 +41,7 @@ st.markdown("""
         margin-bottom: 5px;
         letter-spacing: 1px;
     }
+
     .sub-title {
         text-align: center;
         color: #558b2f;
@@ -69,29 +59,32 @@ st.markdown("""
         border-top: 4px solid #4caf50 !important;
         transition: all 0.3s ease !important;
     }
+
     div[data-testid="stMetric"]:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 25px rgba(46, 125, 50, 0.2) !important;
     }
+
     div[data-testid="stMetric"] label {
         color: #555555 !important;
         font-size: 1rem !important;
         font-weight: bold !important;
     }
+
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
         color: #2e7d32 !important;
         font-weight: 900 !important;
         font-size: 2.1rem !important;
     }
 
-    /* 侧边栏美化 */
+    /* 侧边栏面板美化 */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e0e0e0;
         box-shadow: 2px 0 10px rgba(0,0,0,0.02);
     }
 
-    /* 下载按钮 */
+    /* 下载按钮美化 */
     .stDownloadButton button {
         background: linear-gradient(135deg, #43a047, #2e7d32) !important;
         color: white !important;
@@ -103,18 +96,17 @@ st.markdown("""
         transition: all 0.3s ease !important;
         box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3) !important;
     }
+
     .stDownloadButton button:hover {
         transform: scale(1.02);
         box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5) !important;
     }
 
-    /* ======= 暴力修复：Radio 伪装 Tab，绝对居中无圆圈 ======= */
-    /* 1. 强制隐藏所有的单选框圆圈 */
+    /* ======= Radio 伪装顶部导航栏 ======= */
     [data-testid="stRadio"] label > div:first-child {
         display: none !important;
     }
 
-    /* 2. 最外层也强制居中撑满 */
     [data-testid="stRadio"] {
         display: flex !important;
         justify-content: center !important;
@@ -122,7 +114,6 @@ st.markdown("""
         margin-top: 20px !important;
     }
 
-    /* 3. 内部选项横向排列并居中 */
     div[role="radiogroup"] {
         display: flex !important;
         justify-content: center !important;
@@ -132,7 +123,6 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* 4. 字号超大，加粗 */
     div[role="radiogroup"] > label {
         font-size: 1.5rem !important;
         font-weight: 900 !important;
@@ -142,10 +132,10 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* 5. 选中与悬停颜色 */
     div[role="radiogroup"] > label:hover {
         color: #2e7d32 !important;
     }
+
     div[role="radiogroup"] > label[data-checked="true"] {
         color: #2e7d32 !important;
         border-bottom: 4px solid #43a047 !important;
@@ -166,18 +156,16 @@ with st.sidebar:
     st.markdown("**🔆 光伏发电**")
     pv_capacity = st.number_input("光伏装机容量 (kW)", min_value=10, max_value=5000, value=500, step=10)
     pv_efficiency = st.slider("系统转换效率", 0.6, 1.0, 0.85, 0.01)
-
     st.markdown("**🔋 储能配置**")
     storage_kwh = st.number_input("储能系统容量 (kWh)", min_value=0, max_value=2000, value=200, step=10)
     p_ch_max = st.number_input("最大充电功率 (kW)", min_value=0, max_value=500, value=100, step=10)
     p_dis_max = st.number_input("最大放电功率 (kW)", min_value=0, max_value=500, value=100, step=10)
-
     with st.expander("⚙️ 外部环境与电价", expanded=False):
         price_peak = st.number_input("峰段电价 (元/kWh)", value=1.2, step=0.05)
         price_flat = st.number_input("平段电价 (元/kWh)", value=0.7, step=0.05)
         price_valley = st.number_input("谷段电价 (元/kWh)", value=0.3, step=0.05)
-        emission_factor = st.number_input("电网排放因子 (tCO₂/MWh)", value=0.785, step=0.001)
-
+        # 修复：增加 format="%.3f"，±按钮正常工作
+        emission_factor = st.number_input("电网排放因子 (tCO₂/MWh)", value=0.785, step=0.001, format="%.3f")
     st.markdown("---")
     st.markdown("**🎯 优化目标权重**")
     carbon_weight = st.slider("降碳权重 (0=纯经济, 1=纯降碳)", 0.0, 1.0, 0.5, 0.05)
@@ -190,37 +178,31 @@ noise = np.random.normal(0, 0.05, T)
 irradiance = 1000 * np.exp(-((hours - 12.5) ** 2) / (2 * 3.0 ** 2)) * (1 + noise)
 irradiance = np.clip(irradiance, 0, 1000)
 pv_forecast = pv_capacity * (irradiance / 1000.0) * pv_efficiency
-
 load_base = 0.55 * pv_capacity
 load_noise = np.random.normal(0, 0.02, T)
 load_forecast = load_base * (1 + 0.3 * np.sin((hours - 8) * np.pi / 12)) * (1 + load_noise)
-
 price_buy = np.ones(T) * price_flat
 price_buy[0:8] = price_valley
 price_buy[18:23] = price_peak
-
 params = {
     "storage_kwh": storage_kwh, "p_ch_max": p_ch_max, "p_dis_max": p_dis_max,
     "carbon_weight": carbon_weight, "emission_factor": emission_factor
 }
-
 baseline_grid_buy = np.maximum(0, load_forecast - pv_forecast)
 res = run_optimization(pv_forecast, load_forecast, price_buy, params)
 metrics = compute_metrics(res, pv_forecast, price_buy, params, baseline_grid_buy)
 
 # ================= 3. 绘制图表 =================
 pio.templates.default = "plotly_white"
-
 layout_theme = dict(
     paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
     font=dict(color='#424242', family="sans-serif"),
     xaxis=dict(showgrid=True, gridcolor='#f0f0f0', zeroline=False),
     yaxis=dict(showgrid=True, gridcolor='#f0f0f0', zeroline=False),
     hovermode="x unified",
-    margin=dict(l=20, r=20, t=40, b=20),  # 移除内部 Title，留出顶部空间
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)  # 图例居中置顶
+    margin=dict(l=20, r=20, t=40, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
 )
-
 # 图1：负荷与光伏
 fig1 = go.Figure()
 fig1.add_trace(go.Scatter(x=hours, y=load_forecast, name="园区负荷", mode="lines",
@@ -228,7 +210,6 @@ fig1.add_trace(go.Scatter(x=hours, y=load_forecast, name="园区负荷", mode="l
 fig1.add_trace(go.Scatter(x=hours, y=pv_forecast, name="光伏出力", mode="lines", fill='tozeroy',
                           line=dict(color='#ff9800', width=3, shape='spline'), fillcolor='rgba(255, 152, 0, 0.15)'))
 fig1.update_layout(height=340, **layout_theme)
-
 # 图2：调度结果
 fig2 = go.Figure()
 if res is not None:
@@ -262,7 +243,6 @@ if nav_selection == "📊 核心调度与效益":
     col_chart1, col_chart2 = st.columns(2)
 
     with col_chart1:
-        # 网页原生标题代替图表内部标题
         st.markdown("<h4 style='text-align: center; color: #2e7d32; margin-bottom: 0;'>📈 时序预测曲线 (24h)</h4>",
                     unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
@@ -271,7 +251,6 @@ if nav_selection == "📊 核心调度与效益":
         st.markdown("<h4 style='text-align: center; color: #2e7d32; margin-bottom: 0;'>⚡ 逐时智能调度策略</h4>",
                     unsafe_allow_html=True)
         st.plotly_chart(fig2, use_container_width=True)
-
 elif nav_selection == "🔍 多方案深度对比":
     st.markdown("### 🔍 多配置方案测算对比")
     st.info("系统自动测算 100kWh / 200kWh / 300kWh 三种储能配置的经济与减排效益。")
@@ -309,10 +288,9 @@ elif nav_selection == "🔍 多方案深度对比":
         "yaxis": dict(title="年减碳量 (吨)", showgrid=True, gridcolor='#f0f0f0', zeroline=False),
         "yaxis2": dict(title="回收期 (年)", overlaying='y', side='right', showgrid=False),
         "height": 450,
-        "margin": dict(t=60)  # 给标题和图例留空间
+        "margin": dict(t=60)
     })
     st.plotly_chart(fig_compare, use_container_width=True)
-
 elif nav_selection == "📉 敏感性边界分析":
     st.markdown("### 📉 电价波动敏感性分析")
     st.info("系统测算当电价在 ±20% 范围波动时，项目经济性的边界与抗风险能力。")
@@ -352,10 +330,9 @@ elif nav_selection == "📉 敏感性边界分析":
         "yaxis": dict(title="年电费节省 (万元)", showgrid=True, gridcolor='#f0f0f0', zeroline=False),
         "yaxis2": dict(title="静态回收期 (年)", overlaying='y', side='right', showgrid=False),
         "height": 450,
-        "margin": dict(t=60)  # 给标题和图例留空间
+        "margin": dict(t=60)
     })
     st.plotly_chart(fig_sens, use_container_width=True)
-
 elif nav_selection == "📄 智能评估报告导出":
     st.markdown("### 📄 生成智能评估报告")
     st.write("基于当前系统参数，自动生成排版精美的专业报告。")
@@ -385,16 +362,14 @@ elif nav_selection == "📄 智能评估报告导出":
         <h3>01. 系统基础参数</h3>
         <table>
             <tr><th>光伏装机容量</th><td>{pv_capacity} kW</td><th>储能配置容量</th><td>{storage_kwh} kWh</td></tr>
-            <tr><th>降碳权重设定</th><td>{carbon_weight}</td><th>电网排放因子</th><td>{emission_factor} tCO₂/MWh</td></tr>
+            <tr><th>降碳权重设定</th><td>{carbon_weight}</td><th>电网排放因子</th><td>{emission_factor:.3f} tCO₂/MWh</td></tr>
         </table>
-
         <h3>02. 节能减排核心指标 (年度)</h3>
         <table>
             <tr><th>光伏自用率</th><td class="highlight">{metrics['self_use_rate'] * 100:.1f}%</td></tr>
             <tr><th>年减少外购电量</th><td>{metrics['annual_grid_reduction']:.0f} kWh</td></tr>
             <tr><th>年 CO₂ 减排量</th><td class="highlight">{metrics['co2_reduction']:.1f} 吨</td></tr>
         </table>
-
         <h3>03. 经济效益指标 (年度)</h3>
         <table>
             <tr><th>年电费节约</th><td class="highlight">{metrics['annual_saving'] / 10000:.2f} 万元</td></tr>
@@ -420,6 +395,5 @@ elif nav_selection == "📄 智能评估报告导出":
         )
     with col_tip:
         st.info("💡 下载后双击文件即可在浏览器中打开，按 `Ctrl+P` 可直接另存为 PDF。")
-
     st.markdown("<br>### 👀 报告在线预览", unsafe_allow_html=True)
     components.html(report_html, height=500, scrolling=True)
