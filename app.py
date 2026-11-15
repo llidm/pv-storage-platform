@@ -16,8 +16,31 @@ st.markdown("""
 <style>
     /* 隐藏默认菜单和页脚 */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* 让顶部栏变透明，但不隐藏它（保留侧边栏按钮） */
+    [data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
+    
+    /* 精准隐藏右上角的 Deploy 按钮和工具栏 */
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+    [data-testid="stDecoration"] {
+        display: none !important;
+    }
+    
+    /* 美化侧边栏的展开按钮，让它在收起后依然清晰可见 */
+    [data-testid="collapsedControl"] {
+        visibility: visible !important;
+        display: block !important;
+        background-color: #ffffff;
+        border-radius: 0 8px 8px 0;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        color: #2e7d32;
+        z-index: 9999;
+    }
 
     /* 主标题 */
     .main-title {
