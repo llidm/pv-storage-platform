@@ -14,7 +14,7 @@ st.set_page_config(page_title="光储荷协同优化决策平台", layout="wide"
 # 注入高级环保绿自定义 CSS
 st.markdown("""
 <style>
-        /* ======= 修复侧边栏展开按钮 ======= */
+    /* ======= 修复侧边栏展开按钮 ======= */
     /* 隐藏顶部多余的东西，但不要用 visibility: hidden 整个 header */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
