@@ -14,32 +14,31 @@ st.set_page_config(page_title="光储荷协同优化决策平台", layout="wide"
 # 注入高级环保绿自定义 CSS
 st.markdown("""
 <style>
-    /* 隐藏默认菜单和页脚 */
+        /* ======= 修复侧边栏展开按钮 ======= */
+    /* 隐藏顶部多余的东西，但不要用 visibility: hidden 整个 header */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    [data-testid="stToolbar"] {display: none !important;}
     
-    /* 让顶部栏变透明，但不隐藏它（保留侧边栏按钮） */
-    [data-testid="stHeader"] {
-        background-color: transparent !important;
-    }
-    
-    /* 精准隐藏右上角的 Deploy 按钮和工具栏 */
-    [data-testid="stToolbar"] {
-        display: none !important;
-    }
-    [data-testid="stDecoration"] {
-        display: none !important;
-    }
-    
-    /* 美化侧边栏的展开按钮，让它在收起后依然清晰可见 */
-    [data-testid="collapsedControl"] {
-        visibility: visible !important;
+    /* 把折叠按钮固定到左上角，并且放大、加颜色，绝对看得见 */
+    [data-testid="stSidebarCollapsedControl"] {
         display: block !important;
-        background-color: #ffffff;
-        border-radius: 0 8px 8px 0;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        color: #2e7d32;
-        z-index: 9999;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 999999 !important;
+        background-color: #2e7d32 !important; /* 绿色背景 */
+        border-radius: 5px !important;
+        padding: 5px !important;
+    }
+    
+    /* 改变里面箭头图标的颜色 */
+    [data-testid="stSidebarCollapsedControl"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+        width: 24px !important;
+        height: 24px !important;
     }
 
     /* 主标题 */
