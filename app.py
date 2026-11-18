@@ -7,6 +7,7 @@ import pandas as pd
 import numpy_financial as npf
 from core.optimizer import run_optimization
 from core.metrics import compute_metrics
+from io import BytesIO
 
 # ================= 页面基础配置【锁定侧边栏，禁止收起】 =================
 st.set_page_config(
@@ -16,7 +17,6 @@ st.set_page_config(
     initial_sidebar_state="locked",  # 锁定侧边栏，隐藏折叠按钮
     menu_items=None
 )
-
 # 注入 CSS：只做页面美化，不碰侧边栏折叠控件
 st.markdown("""
 <style>
@@ -24,12 +24,10 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stToolbar"] {display: none !important;}
-
     header[data-testid="stHeader"] {
         background-color: transparent !important;
         height: 3rem !important;
     }
-
     /* ======= 页面美化 ======= */
     .main-title {
         text-align: center;
@@ -41,7 +39,6 @@ st.markdown("""
         margin-bottom: 5px;
         letter-spacing: 1px;
     }
-
     .sub-title {
         text-align: center;
         color: #558b2f;
@@ -49,7 +46,6 @@ st.markdown("""
         margin-bottom: 30px;
         font-weight: 500;
     }
-
     /* 指标卡片 */
     div[data-testid="stMetric"] {
         background-color: #ffffff !important;
@@ -59,31 +55,26 @@ st.markdown("""
         border-top: 4px solid #4caf50 !important;
         transition: all 0.3s ease !important;
     }
-
     div[data-testid="stMetric"]:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 25px rgba(46, 125, 50, 0.2) !important;
     }
-
     div[data-testid="stMetric"] label {
         color: #555555 !important;
         font-size: 1rem !important;
         font-weight: bold !important;
     }
-
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
         color: #2e7d32 !important;
         font-weight: 900 !important;
         font-size: 2.1rem !important;
     }
-
     /* 侧边栏面板美化 */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e0e0e0;
         box-shadow: 2px 0 10px rgba(0,0,0,0.02);
     }
-
     /* 下载按钮美化 */
     .stDownloadButton button {
         background: linear-gradient(135deg, #43a047, #2e7d32) !important;
@@ -96,24 +87,20 @@ st.markdown("""
         transition: all 0.3s ease !important;
         box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3) !important;
     }
-
     .stDownloadButton button:hover {
         transform: scale(1.02);
         box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5) !important;
     }
-
     /* ======= Radio 伪装顶部导航栏 ======= */
     [data-testid="stRadio"] label > div:first-child {
         display: none !important;
     }
-
     [data-testid="stRadio"] {
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
         margin-top: 20px !important;
     }
-
     div[role="radiogroup"] {
         display: flex !important;
         justify-content: center !important;
@@ -122,7 +109,6 @@ st.markdown("""
         padding-bottom: 15px !important;
         width: 100% !important;
     }
-
     div[role="radiogroup"] > label {
         font-size: 1.5rem !important;
         font-weight: 900 !important;
@@ -131,11 +117,9 @@ st.markdown("""
         margin: 0 !important;
         padding: 0 !important;
     }
-
     div[role="radiogroup"] > label:hover {
         color: #2e7d32 !important;
     }
-
     div[role="radiogroup"] > label[data-checked="true"] {
         color: #2e7d32 !important;
         border-bottom: 4px solid #43a047 !important;
@@ -143,19 +127,32 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
 st.markdown('<div class="main-title">🌿 光储荷协同智能调度系统</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Photovoltaic-Storage-Load Synergistic Optimization Platform</div>',
             unsafe_allow_html=True)
-
 # ================= 1. 侧边栏 =================
 with st.sidebar:
     st.markdown("### 🛠 参数配置中心")
     st.markdown("---")
-
-    # ========== 新增：CSV上传模块 ==========
+    # ========== 新增：CSV上传模块 + 模板下载 ==========
     st.markdown("**📂 时序数据上传（CSV）**")
     st.caption("格式：hour, pv, load，共24行；不上传则使用模拟数据")
+    # 生成CSV模板
+    template_df = pd.DataFrame({
+        "hour": list(range(24)),
+        "pv": [0,0,0,0,0,0,10,40,120,260,420,380,320,240,140,60,20,0,0,0,0,0,0,0],
+        "load": [200,195,190,192,198,205,220,245,270,300,340,360,350,330,310,290,270,250,240,230,220,215,210,205]
+    })
+    buf = BytesIO()
+    template_df.to_csv(buf, index=False, encoding="utf-8-sig")
+    buf.seek(0)
+    st.download_button(
+        label="📥 下载CSV模板",
+        data=buf,
+        file_name="光储荷时序模板.csv",
+        mime="text/csv"
+    )
+
     uploaded_file = st.file_uploader("上传光伏负荷时序表", type="csv")
     use_real_data = False
     pv_forecast = None
@@ -181,7 +178,6 @@ with st.sidebar:
                     use_real_data = True
         except Exception as e:
             st.error(f"文件读取失败：{str(e)}")
-
     st.markdown("**🔆 光伏发电**")
     pv_capacity = st.number_input("光伏装机容量 (kW)", min_value=10, max_value=5000, value=500, step=10,
                                   disabled=use_real_data)
@@ -198,8 +194,7 @@ with st.sidebar:
         emission_factor = st.number_input("电网排放因子 (tCO₂/MWh)", value=0.785, step=0.001, format="%.3f")
     st.markdown("---")
     st.markdown("**🎯 优化目标权重**")
-    carbon_weight = st.slider("降碳权重 (0=纯经济, 1=纯降碳)", 0.0, 1.0, 0.5, 0.05)
-
+    carbon_weight = st.slider("降碳权重 (0=纯经济, 1=纯降碳)", 0.0, 1.0, 0.0, 0.05)
 # ================= 2. 数据准备与求解 =================
 T = 24
 hours = np.arange(T)
@@ -214,9 +209,12 @@ if not use_real_data:
     load_noise = np.random.normal(0, 0.02, T)
     load_forecast = load_base * (1 + 0.3 * np.sin((hours - 8) * np.pi / 12)) * (1 + load_noise)
 
+# =========【重点修改电价分段，拉大峰谷差，让储能愿意充放电】=========
 price_buy = np.ones(T) * price_flat
-price_buy[0:8] = price_valley
-price_buy[18:23] = price_peak
+price_buy[0:7] = price_valley      # 0~6 深夜谷段
+price_buy[11:14] = price_flat      # 中午光伏大发，平段
+price_buy[17:22] = price_peak       # 17~21 晚高峰，电价最贵，储能放电
+
 params = {
     "storage_kwh": storage_kwh, "p_ch_max": p_ch_max, "p_dis_max": p_dis_max,
     "carbon_weight": carbon_weight, "emission_factor": emission_factor
@@ -224,7 +222,6 @@ params = {
 baseline_grid_buy = np.maximum(0, load_forecast - pv_forecast)
 res = run_optimization(pv_forecast, load_forecast, price_buy, params)
 metrics = compute_metrics(res, pv_forecast, price_buy, params, baseline_grid_buy)
-
 # ================= 3. 绘制图表 =================
 pio.templates.default = "plotly_white"
 layout_theme = dict(
@@ -254,7 +251,6 @@ if res is not None:
         yaxis2=dict(title="SOC (kWh)", overlaying='y', side='right', showgrid=False, color='#2e7d32'),
         height=380, barmode='relative', **layout_theme
     )
-
 # ================= 4. 顶部导航栏 =================
 nav_selection = st.radio(
     "导航菜单",
@@ -262,7 +258,6 @@ nav_selection = st.radio(
     horizontal=True,
     label_visibility="collapsed"
 )
-
 # ================= 5. 页面内容区 =================
 if nav_selection == "📊 核心调度与效益":
     st.markdown("### 📌 年度综合效益核算")
@@ -271,15 +266,12 @@ if nav_selection == "📊 核心调度与效益":
     m2.metric("🌱 年减碳量", f"{metrics['co2_reduction']:.1f} 吨")
     m3.metric("💰 年电费节省", f"{metrics['annual_saving'] / 10000:.2f} 万元")
     m4.metric("⏳ 静态回收期", f"{metrics['payback']:.1f} 年")
-
     st.markdown("<br>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
-
     with col_chart1:
         st.markdown("<h4 style='text-align: center; color: #2e7d32; margin-bottom: 0;'>📈 时序预测曲线 (24h)</h4>",
                     unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
-
     with col_chart2:
         st.markdown("<h4 style='text-align: center; color: #2e7d32; margin-bottom: 0;'>⚡ 逐时智能调度策略</h4>",
                     unsafe_allow_html=True)
@@ -287,7 +279,6 @@ if nav_selection == "📊 核心调度与效益":
 elif nav_selection == "🔍 多方案深度对比":
     st.markdown("### 🔍 多配置方案测算对比")
     st.info("系统自动测算 100kWh / 200kWh / 300kWh 三种储能配置的经济与减排效益。")
-
     compare_results = []
     for cap in [100, 200, 300]:
         temp_params = params.copy()
@@ -302,10 +293,8 @@ elif nav_selection == "🔍 多方案深度对比":
                 "年电费节省": f"{m_temp['annual_saving'] / 10000:.2f} 万元",
                 "静态回收期": f"{m_temp['payback']:.1f} 年"
             })
-
     df_compare = pd.DataFrame(compare_results)
     st.dataframe(df_compare, use_container_width=True, hide_index=True)
-
     fig_compare = go.Figure()
     fig_compare.add_trace(
         go.Bar(x=df_compare["储能容量"], y=[float(x.split()[0]) for x in df_compare["年减碳量"]], name="年减碳量 (吨)",
@@ -314,7 +303,6 @@ elif nav_selection == "🔍 多方案深度对比":
         go.Scatter(x=df_compare["储能容量"], y=[float(x.split()[0]) for x in df_compare["静态回收期"]],
                    name="回收期 (年)", mode='lines+markers+text', text=df_compare["静态回收期"],
                    textposition="top center", yaxis="y2", marker_color='#ff7043', line=dict(width=3)))
-
     fig_compare.update_layout(**{
         **layout_theme,
         "title": "不同储能配置的减碳与回收期对比",
@@ -327,7 +315,6 @@ elif nav_selection == "🔍 多方案深度对比":
 elif nav_selection == "📉 敏感性边界分析":
     st.markdown("### 📉 电价波动敏感性分析")
     st.info("系统测算当电价在 ±20% 范围波动时，项目经济性的边界与抗风险能力。")
-
     price_factors = [0.8, 0.9, 1.0, 1.1, 1.2]
     sensitivity_results = []
     for factor in price_factors:
@@ -345,9 +332,7 @@ elif nav_selection == "📉 敏感性边界分析":
                 "年电费节省 (万元)": annual_saving / 10000,
                 "静态回收期 (年)": payback
             })
-
     df_sens = pd.DataFrame(sensitivity_results)
-
     fig_sens = go.Figure()
     fig_sens.add_trace(
         go.Bar(x=df_sens["电价情景"], y=df_sens["年电费节省 (万元)"], name="年电费节省 (万元)", marker_color='#81c784',
@@ -356,7 +341,6 @@ elif nav_selection == "📉 敏感性边界分析":
         go.Scatter(x=df_sens["电价情景"], y=df_sens["静态回收期 (年)"], name="回收期 (年)", mode='lines+markers+text',
                    text=[f"{x:.1f}年" for x in df_sens["静态回收期 (年)"]], textposition="top center",
                    marker_color='#ef5350', line=dict(width=3), yaxis="y2"))
-
     fig_sens.update_layout(**{
         **layout_theme,
         "title": "电价波动对经济性的敏感性分析",
@@ -369,7 +353,6 @@ elif nav_selection == "📉 敏感性边界分析":
 elif nav_selection == "📄 智能评估报告导出":
     st.markdown("### 📄 生成智能评估报告")
     st.write("基于当前系统参数，自动生成排版精美的专业报告。")
-
     report_html = f"""
     <html>
     <head>
@@ -391,7 +374,6 @@ elif nav_selection == "📄 智能评估报告导出":
             <h1>🌿 光储荷协同优化调度方案评估报告</h1>
             <p style="text-align: center; color: #757575; font-size: 14px;">—— 基于多目标优化与智能测算生成 ——</p>
         </div>
-
         <h3>01. 系统基础参数</h3>
         <table>
             <tr><th>光伏装机容量</th><td>{pv_capacity} kW</td><th>储能配置容量</th><td>{storage_kwh} kWh</td></tr>
@@ -410,14 +392,12 @@ elif nav_selection == "📄 智能评估报告导出":
             <tr><th>静态投资回收期</th><td>{metrics['payback']:.1f} 年</td></tr>
             <tr><th>10年净现值 (NPV)</th><td>{metrics['npv'] / 10000:.2f} 万元</td></tr>
         </table>
-
         <p style="margin-top: 50px; text-align: center; color: #9e9e9e; font-size: 12px; border-top: 1px solid #eeeeee; padding-top: 20px;">
             Generated by Photovoltaic-Storage-Load Optimization Platform
         </p>
     </body>
     </html>
     """
-
     col_btn, col_tip = st.columns([1, 2])
     with col_btn:
         st.download_button(
