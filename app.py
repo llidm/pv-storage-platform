@@ -9,7 +9,7 @@ from core.optimizer import run_optimization
 from core.metrics import compute_metrics
 from io import BytesIO
 
-# ================= 页面基础配置【锁定侧边栏，禁止收起】 =================
+
 st.set_page_config(
     page_title="光储荷协同优化决策平台",
     layout="wide",
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="locked",  # 锁定侧边栏，隐藏折叠按钮
     menu_items=None
 )
-# 注入 CSS：只做页面美化，不碰侧边栏折叠控件
+
 st.markdown("""
 <style>
     /* 隐藏默认菜单和右上角工具栏 */
@@ -130,14 +130,14 @@ st.markdown("""
 st.markdown('<div class="main-title">🌿 光储荷协同智能调度系统</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Photovoltaic-Storage-Load Synergistic Optimization Platform</div>',
             unsafe_allow_html=True)
-# ================= 1. 侧边栏 =================
+
 with st.sidebar:
     st.markdown("### 🛠 参数配置中心")
     st.markdown("---")
-    # ========== 新增：CSV上传模块 + 模板下载 ==========
+
     st.markdown("**📂 时序数据上传（CSV）**")
     st.caption("格式：hour, pv, load，共24行；不上传则使用模拟数据")
-    # 生成CSV模板
+
     template_df = pd.DataFrame({
         "hour": list(range(24)),
         "pv": [0,0,0,0,0,0,10,40,120,260,420,380,320,240,140,60,20,0,0,0,0,0,0,0],
@@ -160,7 +160,7 @@ with st.sidebar:
     if uploaded_file is not None:
         try:
             df_upload = pd.read_csv(uploaded_file)
-            # 校验列
+
             need_cols = {"hour", "pv", "load"}
             if not need_cols.issubset(df_upload.columns):
                 st.error("❌ CSV缺少必要列！必须包含 hour、pv、load")
@@ -170,7 +170,7 @@ with st.sidebar:
                 df_upload = df_upload.sort_values("hour").reset_index(drop=True)
                 pv_forecast = df_upload["pv"].values.astype(float)
                 load_forecast = df_upload["load"].values.astype(float)
-                # 校验负数
+
                 if np.any(pv_forecast < 0) or np.any(load_forecast < 0):
                     st.error("❌ pv、load不能为负数！")
                 else:
@@ -195,10 +195,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**🎯 优化目标权重**")
     carbon_weight = st.slider("降碳权重 (0=纯经济, 1=纯降碳)", 0.0, 1.0, 0.0, 0.05)
-# ================= 2. 数据准备与求解 =================
+
 T = 24
 hours = np.arange(T)
-# 如果没有上传文件，生成模拟数据
+
 if not use_real_data:
     np.random.seed(42)
     noise = np.random.normal(0, 0.05, T)
@@ -209,7 +209,7 @@ if not use_real_data:
     load_noise = np.random.normal(0, 0.02, T)
     load_forecast = load_base * (1 + 0.3 * np.sin((hours - 8) * np.pi / 12)) * (1 + load_noise)
 
-# =========【重点修改电价分段，拉大峰谷差，让储能愿意充放电】=========
+
 price_buy = np.ones(T) * price_flat
 price_buy[0:7] = price_valley      # 0~6 深夜谷段
 price_buy[11:14] = price_flat      # 中午光伏大发，平段
@@ -222,7 +222,7 @@ params = {
 baseline_grid_buy = np.maximum(0, load_forecast - pv_forecast)
 res = run_optimization(pv_forecast, load_forecast, price_buy, params)
 metrics = compute_metrics(res, pv_forecast, price_buy, params, baseline_grid_buy)
-# ================= 3. 绘制图表 =================
+
 pio.templates.default = "plotly_white"
 layout_theme = dict(
     paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -233,14 +233,14 @@ layout_theme = dict(
     margin=dict(l=20, r=20, t=40, b=20),
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
 )
-# 图1：负荷与光伏
+
 fig1 = go.Figure()
 fig1.add_trace(go.Scatter(x=hours, y=load_forecast, name="园区负荷", mode="lines",
                           line=dict(color='#2196f3', width=3, shape='spline')))
 fig1.add_trace(go.Scatter(x=hours, y=pv_forecast, name="光伏出力", mode="lines", fill='tozeroy',
                           line=dict(color='#ff9800', width=3, shape='spline'), fillcolor='rgba(255, 152, 0, 0.15)'))
 fig1.update_layout(height=340, **layout_theme)
-# 图2：调度结果
+
 fig2 = go.Figure()
 if res is not None:
     fig2.add_trace(go.Bar(x=hours, y=res["charge"], name="储能充电 (消纳)", marker_color='#66bb6a', opacity=0.85))
@@ -251,14 +251,14 @@ if res is not None:
         yaxis2=dict(title="SOC (kWh)", overlaying='y', side='right', showgrid=False, color='#2e7d32'),
         height=380, barmode='relative', **layout_theme
     )
-# ================= 4. 顶部导航栏 =================
+
 nav_selection = st.radio(
     "导航菜单",
     ["📊 核心调度与效益", "🔍 多方案深度对比", "📉 敏感性边界分析", "📄 智能评估报告导出"],
     horizontal=True,
     label_visibility="collapsed"
 )
-# ================= 5. 页面内容区 =================
+
 if nav_selection == "📊 核心调度与效益":
     st.markdown("### 📌 年度综合效益核算")
     m1, m2, m3, m4 = st.columns(4)
