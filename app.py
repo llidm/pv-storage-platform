@@ -252,6 +252,23 @@ if res is not None:
         height=380, barmode='relative', **layout_theme
     )
 
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(x=hours, y=load_forecast, name="原始园区负荷", mode="lines", line=dict(color='#b0bec5', dash='dash')))
+
+if res is not None:
+    grid_curve = res["grid_buy"] + pv_forecast
+    fig3.add_trace(go.Scatter(x=hours, y=grid_curve, name="优化后电网取电", fill='tozeroy', line=dict(color='#2e7d32', width=3)))
+    peak_limit = res["peak_demand"]
+    fig3.add_hline(y=peak_limit, line_dash="dot", line_color="red", annotation_text=f"最大需量控制线: {peak_limit:.1f} kW")
+
+fig3.update_layout(
+    title="📉 基于需量控制的园区负荷削峰效果",
+    xaxis_title="小时", yaxis_title="功率 (kW)",
+    height=340, **layout_theme
+)
+
+st.markdown("<h4 style='text-align: center; color: #2e7d32; margin-bottom: 0;'>📉 需量控制与削峰填谷</h4>", unsafe_allow_html=True)
+st.plotly_chart(fig3, use_container_width=True)
 nav_selection = st.radio(
     "导航菜单",
     ["📊 核心调度与效益", "🔍 多方案深度对比", "📉 敏感性边界分析", "📄 智能评估报告导出"],
@@ -261,11 +278,17 @@ nav_selection = st.radio(
 
 if nav_selection == "📊 核心调度与效益":
     st.markdown("### 📌 年度综合效益核算")
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4, m5 = st.columns(5)
+    # 计算一个边际减排成本（多降一吨碳，需要多花多少钱）
+    carbon_marginal_cost = (metrics['annual_saving'] / metrics['co2_reduction']) if metrics['co2_reduction'] > 0 else 0
+
     m1.metric("⚡ 光伏自用率", f"{metrics['self_use_rate'] * 100:.1f}%")
     m2.metric("🌱 年减碳量", f"{metrics['co2_reduction']:.1f} 吨")
     m3.metric("💰 年电费节省", f"{metrics['annual_saving'] / 10000:.2f} 万元")
     m4.metric("⏳ 静态回收期", f"{metrics['payback']:.1f} 年")
+    # 新增：高级投资指标
+    m5.metric("📈 减排经济性", f"{carbon_marginal_cost:.0f} 元/吨",
+              help="每减少一吨碳排放对应的电费节省，该值越高说明降碳方案越具经济性。")
     st.markdown("<br>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
