@@ -20,7 +20,7 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* 隐藏默认菜单和右上角工具栏 */
+   
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stToolbar"] {display: none !important;}
@@ -28,7 +28,7 @@ st.markdown("""
         background-color: transparent !important;
         height: 3rem !important;
     }
-    /* ======= 页面美化 ======= */
+   
     .main-title {
         text-align: center;
         background: linear-gradient(90deg, #1b5e20, #4caf50, #2e7d32);
@@ -46,7 +46,7 @@ st.markdown("""
         margin-bottom: 30px;
         font-weight: 500;
     }
-    /* 指标卡片 */
+   
     div[data-testid="stMetric"] {
         background-color: #ffffff !important;
         padding: 20px !important;
@@ -69,13 +69,13 @@ st.markdown("""
         font-weight: 900 !important;
         font-size: 2.1rem !important;
     }
-    /* 侧边栏面板美化 */
+   
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e0e0e0;
         box-shadow: 2px 0 10px rgba(0,0,0,0.02);
     }
-    /* 下载按钮美化 */
+   
     .stDownloadButton button {
         background: linear-gradient(135deg, #43a047, #2e7d32) !important;
         color: white !important;
@@ -91,7 +91,7 @@ st.markdown("""
         transform: scale(1.02);
         box-shadow: 0 6px 15px rgba(46, 125, 50, 0.5) !important;
     }
-    /* ======= Radio 伪装顶部导航栏 ======= */
+    
     [data-testid="stRadio"] label > div:first-child {
         display: none !important;
     }
